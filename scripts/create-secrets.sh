@@ -40,18 +40,24 @@ COGNITO_CLIENT_ID=$(terraform output -raw cognito_client_id)
 DYNAMODB_TABLES_JSON=$(terraform output -json dynamodb_table_names)
 SECRETS_PREFIX=$(terraform output -raw secrets_name_prefix)
 
+# JWT secrets MUST be identical across every service: identity-service signs
+# tokens, every other service verifies them. Generating these once here (not
+# per-service inside the loop, which was the original bug — each service got
+# its own random secret, so cross-service auth could never work) is what
+# makes that possible.
+if [ "$KEEP_JWT" = true ] && aws secretsmanager describe-secret --secret-id "${SECRETS_PREFIX}/identity-service" --region "$AWS_REGION" >/dev/null 2>&1; then
+  EXISTING=$(aws secretsmanager get-secret-value --secret-id "${SECRETS_PREFIX}/identity-service" --region "$AWS_REGION" --query SecretString --output text)
+  JWT_SECRET=$(echo "$EXISTING" | jq -r '.JWT_SECRET')
+  JWT_REFRESH_SECRET=$(echo "$EXISTING" | jq -r '.JWT_REFRESH_SECRET')
+  echo "==> Keeping existing shared JWT secrets"
+else
+  JWT_SECRET=$(openssl rand -hex 32)
+  JWT_REFRESH_SECRET=$(openssl rand -hex 32)
+  echo "==> Generated new shared JWT secrets"
+fi
+
 for SERVICE in "${SERVICES[@]}"; do
   SECRET_NAME="${SECRETS_PREFIX}/${SERVICE}"
-
-  if [ "$KEEP_JWT" = true ] && aws secretsmanager describe-secret --secret-id "$SECRET_NAME" --region "$AWS_REGION" >/dev/null 2>&1; then
-    EXISTING=$(aws secretsmanager get-secret-value --secret-id "$SECRET_NAME" --region "$AWS_REGION" --query SecretString --output text)
-    JWT_SECRET=$(echo "$EXISTING" | jq -r '.JWT_SECRET')
-    JWT_REFRESH_SECRET=$(echo "$EXISTING" | jq -r '.JWT_REFRESH_SECRET')
-    echo "==> ${SERVICE}: keeping existing JWT secrets"
-  else
-    JWT_SECRET=$(openssl rand -hex 32)
-    JWT_REFRESH_SECRET=$(openssl rand -hex 32)
-  fi
 
   SECRET_JSON=$(jq -n \
     --arg ENVIRONMENT "$ENV" \

@@ -1,0 +1,148 @@
+name: Terraform Apply
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      workspace:
+        description: 'Terraform workspace to apply (overrides branch mapping)'
+        required: true
+        type: choice
+        options: [dev, prod]
+      create_global_resources:
+        description: 'Apply account-level singletons (ECR/ACM/Route53/OIDC) — only needed once, on a dev apply'
+        required: true
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      workspace: ${{ steps.vars.outputs.workspace }}
+      create_global_resources: ${{ steps.vars.outputs.create_global_resources }}
+    steps:
+      - name: Resolve workspace from trigger
+        id: vars
+        run: |
+          if [ -n "${{ inputs.workspace }}" ]; then
+            echo "workspace=${{ inputs.workspace }}" >> "$GITHUB_OUTPUT"
+            echo "create_global_resources=${{ inputs.create_global_resources }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.pull_request.base.ref || github.ref_name }}" = "main" ]; then
+            echo "workspace=prod" >> "$GITHUB_OUTPUT"
+            echo "create_global_resources=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "workspace=dev" >> "$GITHUB_OUTPUT"
+            echo "create_global_resources=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  plan:
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.workspace }}
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform fmt check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock"
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: IaC security scan (tfsec)
+        uses: aquasecurity/tfsec-action@v1.0.3
+
+      - name: IaC security scan (Checkov)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          quiet: true
+
+      - name: Select workspace
+        run: terraform workspace select ${{ needs.setup.outputs.workspace }} || terraform workspace new ${{ needs.setup.outputs.workspace }}
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform plan \
+            -var-file="${{ needs.setup.outputs.workspace }}.tfvars" \
+            -var="create_global_resources=${{ needs.setup.outputs.create_global_resources }}" \
+            -out=tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan-${{ needs.setup.outputs.workspace }}-${{ github.run_id }}
+          path: tfplan
+          retention-days: 1
+
+  apply:
+    if: github.event_name != 'pull_request'
+    needs: [setup, plan]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.workspace }}-apply
+    env:
+      AWS_REGION: us-east-1
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="dynamodb_table=terraform-state-lock"
+
+      - name: Select workspace
+        run: terraform workspace select ${{ needs.setup.outputs.workspace }}
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan-${{ needs.setup.outputs.workspace }}-${{ github.run_id }}
+
+      - name: Terraform Apply (reviewed plan)
+        run: terraform apply tfplan
+
+      - name: Show outputs
+        run: terraform output

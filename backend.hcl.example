@@ -1,0 +1,5 @@
+# Copy to backend.hcl (gitignored) and fill in for your account, or just pass
+# these same keys directly as -backend-config="key=value" flags at init time.
+bucket         = "procurement-tf-state-<account-or-org-name>"
+region         = "us-east-1"
+dynamodb_table = "terraform-state-lock"

@@ -1,0 +1,10 @@
+variable "environment" { type = string }
+variable "services" { type = list(string) }
+variable "oidc_provider_arn" { type = string }
+variable "secret_arns" { type = list(string) }
+variable "dynamodb_tables" { type = list(string) }
+variable "s3_bucket_arn" { type = string }
+variable "kms_key_arn" { type = string }
+variable "aws_region" { type = string }
+variable "bedrock_text_model_id" { type = string }
+variable "bedrock_embedding_model_id" { type = string }

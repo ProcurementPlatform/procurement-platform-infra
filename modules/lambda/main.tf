@@ -1,5 +1,18 @@
 # Monitoring alerts parsing Lambda (terraform-aws-modules/lambda/aws)
 # Triggered by SNS, renders a templated HTML email, sends it via SES.
+#
+# Zipped via Terraform's own archive_file (not the module's source_path),
+# since source_path uses a local-exec build that writes a plan.json during
+# `terraform plan` and reads it back during `terraform apply` — fails with
+# "FileNotFoundError" whenever plan and apply run in separate CI jobs (the
+# plan.json only ever existed on the plan job's filesystem). archive_file has
+# no such split; the zip is built deterministically in a single step.
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/lambda"
+  output_path = "${path.module}/builds/monitoring-alerts-${var.environment}.zip"
+}
+
 module "lambda_function" {
   source  = "terraform-aws-modules/lambda/aws"
   version = "~> 7.0"
@@ -10,7 +23,8 @@ module "lambda_function" {
   runtime       = "nodejs18.x"
   timeout       = 30
 
-  source_path = "${path.module}/lambda"
+  create_package         = false
+  local_existing_package = data.archive_file.lambda_zip.output_path
 
   tracing_mode = "Active"
 

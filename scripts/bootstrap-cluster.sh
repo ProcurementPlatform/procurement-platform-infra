@@ -126,6 +126,9 @@ helm repo add argo https://argoproj.github.io/argo-helm --force-update
 helm upgrade --install argocd argo/argo-cd \
   --namespace argocd \
   --set server.service.type=LoadBalancer \
+  --set server.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
+  --set server.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-nlb-target-type"=ip \
+  --set server.service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-type"=external \
   --wait
 
 echo "==> Cloning gitops repo (branch: $GITOPS_BRANCH)..."

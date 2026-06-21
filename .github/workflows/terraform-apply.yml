@@ -79,6 +79,8 @@ jobs:
 
       - name: IaC security scan (tfsec)
         uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: IaC security scan (Checkov)
         uses: bridgecrewio/checkov-action@master

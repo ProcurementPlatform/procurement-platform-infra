@@ -87,7 +87,7 @@ jobs:
           chmod +x /usr/local/bin/tfsec
 
       - name: IaC security scan (tfsec)
-        run: tfsec .
+        run: tfsec . --config-file .tfsec/config.yml
 
       - name: IaC security scan (Checkov)
         uses: bridgecrewio/checkov-action@master

@@ -22,6 +22,12 @@ module "eks" {
 
   create_cloudwatch_log_group    = false
   cluster_endpoint_public_access = true
+  # Public endpoint stays on (with the default 0.0.0.0/0 cidrs) deliberately:
+  # GitHub Actions runner IPs are ephemeral/unenumerable, and bootstrap-cluster.sh
+  # runs from a laptop on varying networks. Both findings are suppressed in
+  # .tfsec/config.yml with this same reasoning. Real access control is IAM/EKS
+  # access entries + Kubernetes RBAC, not network-layer restriction.
+  cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   # Manage the VPC CNI as an addon so we can turn on prefix delegation. This
   # raises the per-node pod cap dramatically (t3.medium: 17 -> ~110 pods), which

@@ -1,0 +1,30 @@
+# Checks excluded here are accepted, documented risks — not unfixed findings.
+# Anything fixable is fixed in the code itself; this file is only for cases
+# where "fixing" it would either break required functionality or fight a
+# vendored module's standard default behavior we don't control.
+exclude:
+  # Default NACL rules from terraform-aws-modules/vpc (allow-all, mirrors AWS's
+  # own default NACL). Security Groups are the real access-control layer here
+  # and are already scoped per-resource; NACLs are not used for fine-grained
+  # control in this design.
+  - aws-ec2-no-excessive-port-access
+  - aws-ec2-no-public-ingress-acl
+
+  # EKS public endpoint stays open deliberately: GitHub Actions runner IPs are
+  # ephemeral and unenumerable, and scripts/bootstrap-cluster.sh runs from a
+  # laptop on varying networks — there's no fixed CIDR to restrict to without
+  # breaking CI/local cluster access. Real access control is IAM/EKS access
+  # entries + Kubernetes RBAC, not network-layer restriction.
+  - aws-eks-no-public-cluster-access
+  - aws-eks-no-public-cluster-access-to-cidr
+
+  # Node-to-internet egress (0.0.0.0/0) is required for nodes to pull images
+  # from ECR/Docker Hub and reach AWS APIs via the NAT gateway — this is
+  # terraform-aws-modules/eks's standard managed-node-group security group
+  # rule, not something we can remove without breaking node bootstrap.
+  - aws-ec2-no-public-egress-sgr
+
+  # Bucket access logging would need a second, dedicated log-target bucket
+  # (its own encryption/lifecycle/policy) — deferred as a follow-up, not done
+  # here to avoid disproportionate scope for one MEDIUM finding.
+  - aws-s3-enable-bucket-logging

@@ -11,6 +11,7 @@ resource "aws_cloudwatch_log_group" "service" {
   for_each          = toset(var.services)
   name              = "/eks/${var.environment}/${each.value}"
   retention_in_days = 30
+  kms_key_id        = var.kms_key_arn
   tags              = var.tags
 }
 

@@ -158,6 +158,7 @@ module "iam_irsa" {
 module "sns" {
   source      = "./modules/sns"
   environment = local.environment
+  kms_key_arn = module.kms.key_arn
 }
 
 module "lambda_alerts" {
@@ -187,6 +188,7 @@ module "cloudwatch" {
   sns_topic_arn        = module.sns.topic_arn
   dynamodb_table_names = values(module.dynamodb.table_names)
   eks_cluster_name     = module.eks.cluster_name
+  kms_key_arn          = module.kms.key_arn
   tags                 = var.tags
 }
 

@@ -1,5 +1,6 @@
 resource "aws_sns_topic" "alerts" {
-  name = "procurement-${var.environment}-alerts"
+  name              = "procurement-${var.environment}-alerts"
+  kms_master_key_id = var.kms_key_arn
 }
 
 # Allows EventBridge and CloudWatch to publish to the topic

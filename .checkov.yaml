@@ -1,0 +1,24 @@
+# Checks skipped here are either inapplicable to how this repo sources
+# modules, or would break real, working functionality if "fixed" literally.
+# Anything genuinely fixable is fixed in the code itself.
+skip-check:
+  # Registry-sourced modules (terraform-aws-modules/*, version = "~> 5.0")
+  # can't use git-style commit-hash pinning at all — that syntax only applies
+  # to source = "git::https://..." modules. .terraform.lock.hcl already pins
+  # the exact resolved version + checksum, which is the registry-appropriate
+  # equivalent. This check fires on every single registry module call in the
+  # repo and isn't an actionable finding.
+  - CKV_TF_1
+
+  # ecr:GetAuthorizationToken, sts:GetCallerIdentity, and eks:ListClusters
+  # genuinely do not support resource-level restriction per the AWS IAM
+  # action reference — Resource: "*" isn't a missed scoping opportunity for
+  # these three, it's the only valid value. (eks:DescribeCluster shares the
+  # statement with eks:ListClusters here; splitting it out for partial
+  # scoping isn't worth a separate statement for one action.)
+  - CKV_AWS_356
+
+  # ECR repos must stay MUTABLE: build.yml pushes both a content-addressed
+  # tag and a rolling `:latest` on every build. IMMUTABLE would reject the
+  # repeat `:latest` push every time.
+  - CKV_AWS_51

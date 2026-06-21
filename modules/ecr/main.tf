@@ -13,16 +13,27 @@ locals {
 }
 
 resource "aws_ecr_repository" "repo" {
-  for_each             = toset(var.services)
-  name                 = "procurement-${local.repo_short_name[each.value]}"
+  for_each = toset(var.services)
+  name     = "procurement-${local.repo_short_name[each.value]}"
+  # MUTABLE is required, not a default left unconsidered: build.yml pushes
+  # both a content-addressed tag and a rolling `:latest` on every build —
+  # IMMUTABLE would reject the repeat `:latest` push every single time.
   image_tag_mutability = "MUTABLE"
 
   lifecycle {
-    prevent_destroy = true
+    # TEMP: false while switching encryption_configuration to KMS — that
+    # attribute is immutable on an existing repo, so this one apply replaces
+    # all 6 (confirmed empty, 0 images, via `aws ecr list-images` — nothing
+    # lost). Revert to true in the very next commit once this lands.
+    prevent_destroy = false
   }
 
   image_scanning_configuration {
     scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "KMS"
   }
 
   tags = var.tags

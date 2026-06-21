@@ -137,7 +137,47 @@ git clone --branch "$GITOPS_BRANCH" --depth 1 "$GITOPS_REPO_URL" "$TMP_DIR/gitop
 
 echo "==> Applying ArgoCD App-of-Apps for $ENV..."
 kubectl apply -f "$TMP_DIR/gitops/applications/environments/$ENV/platform.yaml"
+
+# Read before cleanup — single source of truth is the gitops values file, not
+# a literal duplicated here.
+DOMAIN=$(grep -m1 '^\s*domain:' "$TMP_DIR/gitops/helm/procurement-platform/values-$ENV.yaml" | sed -E 's/^\s*domain:\s*"?([^"[:space:]]+)"?.*/\1/')
 rm -rf "$TMP_DIR"
+
+echo "==> Waiting for app Gateway's NLB and syncing Route 53 record for $DOMAIN..."
+# The NLB is recreated (new hostname) every time this cluster is destroyed and
+# rebuilt — without this step the domain would silently point at a dead LB
+# after any destroy/recreate cycle done for cost saving.
+APP_NAMESPACE="procurement-$ENV"
+NLB_HOSTNAME=""
+for i in $(seq 1 30); do
+  NLB_HOSTNAME=$(kubectl get svc "procurement-$ENV" -n "$APP_NAMESPACE" -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
+  [ -n "$NLB_HOSTNAME" ] && break
+  sleep 10
+done
+
+if [ -z "$NLB_HOSTNAME" ]; then
+  echo "WARN: Gateway NLB hostname not ready after 5 min — Route 53 not updated."
+  echo "      Re-run this script once ArgoCD has synced, or check: kubectl get svc procurement-$ENV -n $APP_NAMESPACE"
+else
+  echo "Gateway NLB: $NLB_HOSTNAME -> upserting Route 53 CNAME for $DOMAIN"
+  ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "procure-flow.online." --query "HostedZones[0].Id" --output text | sed 's#/hostedzone/##')
+  CHANGE_BATCH_FILE=$(mktemp)
+  cat > "$CHANGE_BATCH_FILE" <<JSON
+{
+  "Changes": [{
+    "Action": "UPSERT",
+    "ResourceRecordSet": {
+      "Name": "$DOMAIN",
+      "Type": "CNAME",
+      "TTL": 60,
+      "ResourceRecords": [{"Value": "$NLB_HOSTNAME"}]
+    }
+  }]
+}
+JSON
+  aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch "file://$CHANGE_BATCH_FILE"
+  rm -f "$CHANGE_BATCH_FILE"
+fi
 
 echo ""
 echo "==> Bootstrap complete!"

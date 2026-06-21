@@ -22,6 +22,13 @@ module "eks" {
 
   create_cloudwatch_log_group    = false
   cluster_endpoint_public_access = true
+  # Without this, whoever runs `terraform apply` has AWS IAM permissions on
+  # the cluster but no Kubernetes RBAC access at all — kubectl/helm fail with
+  # "the server has asked for the client to provide credentials" until
+  # someone manually creates an EKS access entry. This makes it automatic:
+  # whichever IAM principal creates the cluster gets an access entry with
+  # cluster-admin Kubernetes RBAC, every time, including after a destroy+recreate.
+  enable_cluster_creator_admin_permissions = true
   # Public endpoint stays on (with the default 0.0.0.0/0 cidrs) deliberately:
   # GitHub Actions runner IPs are ephemeral/unenumerable, and bootstrap-cluster.sh
   # runs from a laptop on varying networks. Both findings are suppressed in

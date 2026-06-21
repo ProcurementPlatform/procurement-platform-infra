@@ -17,3 +17,9 @@ variable "ubuntu_ami_ssm_path" {
   type        = string
   default     = "/aws/service/canonical/ubuntu/eks/22.04/1.30/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }
+
+variable "admin_principal_arns" {
+  description = "IAM principal ARNs that always get a permanent cluster-admin EKS access entry, regardless of who last ran terraform apply. enable_cluster_creator_admin_permissions alone isn't enough when both a human and a CI role apply at different times — whichever applies most recently 'wins' that entry. List your own IAM user/role here so it's never displaced."
+  type        = list(string)
+  default     = []
+}

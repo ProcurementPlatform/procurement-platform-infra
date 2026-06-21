@@ -20,6 +20,11 @@ variable "ubuntu_ami_ssm_path" {
   type        = string
   default     = "/aws/service/canonical/ubuntu/eks/22.04/1.30/stable/current/amd64/hvm/ebs-gp2/ami-id"
 }
+variable "eks_admin_principal_arns" {
+  description = "IAM principal ARNs (your own user/role) that always get a permanent cluster-admin EKS access entry, never displaced by whichever identity (local user or CI role) last ran terraform apply."
+  type        = list(string)
+  default     = []
+}
 variable "s3_bucket_name" { type = string }
 variable "app_hostname" { type = string }
 variable "bedrock_text_model_id" { type = string }

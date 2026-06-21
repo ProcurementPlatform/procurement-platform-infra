@@ -23,6 +23,9 @@ domain_name       = "procure-flow.online"
 github_repo_app   = "ProcurementPlatform/procurement-platform-app"
 github_repo_infra = "ProcurementPlatform/procurement-platform-infra"
 
+# Always gets cluster-admin EKS access, regardless of who last ran apply.
+eks_admin_principal_arns = ["arn:aws:iam::919010206859:user/rootVinay"]
+
 tags = {
   Environment = "prod"
   Project     = "Procurement-Platform"

@@ -96,17 +96,18 @@ module "kms" {
 }
 
 module "eks" {
-  source              = "./modules/eks"
-  environment         = local.environment
-  vpc_id              = module.vpc.vpc_id
-  private_subnets     = module.vpc.private_subnets
-  node_min_size       = var.node_min_size
-  node_max_size       = var.node_max_size
-  node_desired_size   = var.node_desired_size
-  node_instance_types = var.node_instance_types
-  use_ubuntu_ami      = var.use_ubuntu_ami
-  ubuntu_ami_ssm_path = var.ubuntu_ami_ssm_path
-  tags                = var.tags
+  source               = "./modules/eks"
+  environment          = local.environment
+  vpc_id               = module.vpc.vpc_id
+  private_subnets      = module.vpc.private_subnets
+  node_min_size        = var.node_min_size
+  node_max_size        = var.node_max_size
+  node_desired_size    = var.node_desired_size
+  node_instance_types  = var.node_instance_types
+  use_ubuntu_ami       = var.use_ubuntu_ami
+  ubuntu_ami_ssm_path  = var.ubuntu_ami_ssm_path
+  admin_principal_arns = var.eks_admin_principal_arns
+  tags                 = var.tags
 }
 
 module "eks_addons" {

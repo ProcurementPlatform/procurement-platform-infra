@@ -12,6 +12,8 @@ module "lambda_function" {
 
   source_path = "${path.module}/lambda"
 
+  tracing_mode = "Active"
+
   environment_variables = {
     SENDER_EMAIL    = var.sender_email
     RECIPIENT_EMAIL = var.recipient_email

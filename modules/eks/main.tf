@@ -22,6 +22,33 @@ module "eks" {
 
   create_cloudwatch_log_group    = false
   cluster_endpoint_public_access = true
+  # NOT enable_cluster_creator_admin_permissions: that grants access to
+  # whoever happens to run `terraform apply` (you locally, or CI), and since
+  # EKS only allows one access entry per principal, it actively conflicts
+  # with admin_principal_arns below whenever the applier is also in that
+  # list — confirmed by a real ResourceInUseException. Nothing in this config
+  # uses the kubernetes/helm provider anymore (moved to bootstrap-cluster.sh),
+  # so CI never needs Kubernetes RBAC access at all. admin_principal_arns is
+  # the sole, permanent, explicit grant — never displaced by who applies.
+  access_entries = {
+    for idx, arn in var.admin_principal_arns : "admin-${idx}" => {
+      principal_arn = arn
+      policy_associations = {
+        admin = {
+          policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = {
+            type = "cluster"
+          }
+        }
+      }
+    }
+  }
+  # Public endpoint stays on (with the default 0.0.0.0/0 cidrs) deliberately:
+  # GitHub Actions runner IPs are ephemeral/unenumerable, and bootstrap-cluster.sh
+  # runs from a laptop on varying networks. Both findings are suppressed in
+  # .tfsec/config.yml with this same reasoning. Real access control is IAM/EKS
+  # access entries + Kubernetes RBAC, not network-layer restriction.
+  cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
   # Manage the VPC CNI as an addon so we can turn on prefix delegation. This
   # raises the per-node pod cap dramatically (t3.medium: 17 -> ~110 pods), which

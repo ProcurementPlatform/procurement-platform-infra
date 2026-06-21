@@ -13,8 +13,11 @@ locals {
 }
 
 resource "aws_ecr_repository" "repo" {
-  for_each             = toset(var.services)
-  name                 = "procurement-${local.repo_short_name[each.value]}"
+  for_each = toset(var.services)
+  name     = "procurement-${local.repo_short_name[each.value]}"
+  # MUTABLE is required, not a default left unconsidered: build.yml pushes
+  # both a content-addressed tag and a rolling `:latest` on every build —
+  # IMMUTABLE would reject the repeat `:latest` push every single time.
   image_tag_mutability = "MUTABLE"
 
   lifecycle {
@@ -23,6 +26,10 @@ resource "aws_ecr_repository" "repo" {
 
   image_scanning_configuration {
     scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "KMS"
   }
 
   tags = var.tags

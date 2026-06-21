@@ -38,7 +38,13 @@ jobs:
             echo "create_global_resources=${{ inputs.create_global_resources }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.pull_request.base.ref || github.ref_name }}" = "main" ]; then
             echo "workspace=prod" >> "$GITHUB_OUTPUT"
-            echo "create_global_resources=false" >> "$GITHUB_OUTPUT"
+            # prod is the workspace holding the account-level singletons
+            # (ACM/ECR/Route53/OIDC/SES) — every apply of it must pass true,
+            # or Terraform sees count=0 for those modules and plans to
+            # destroy them. (prevent_destroy on ACM/Route53 blocks that from
+            # actually executing, but it shouldn't be relied on as the only
+            # guard — this must always be true here.)
+            echo "create_global_resources=true" >> "$GITHUB_OUTPUT"
           else
             echo "workspace=dev" >> "$GITHUB_OUTPUT"
             echo "create_global_resources=false" >> "$GITHUB_OUTPUT"
@@ -77,15 +83,17 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-      - name: IaC security scan (tfsec)
-        uses: aquasecurity/tfsec-action@v1.0.3
+      - name: Install tfsec
+        # tfsec-action's own installer calls api.github.com to resolve "latest",
+        # which aquasecurity's org-level IP allow-list blocks for GitHub-hosted
+        # runners. Downloading the pinned release asset directly bypasses that
+        # API entirely (it's a static file on a different host).
+        run: |
+          curl -sSL -o /usr/local/bin/tfsec https://github.com/aquasecurity/tfsec/releases/download/v1.28.10/tfsec-linux-amd64
+          chmod +x /usr/local/bin/tfsec
 
-      - name: IaC security scan (Checkov)
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: .
-          framework: terraform
-          quiet: true
+      - name: IaC security scan (tfsec)
+        run: tfsec . --config-file .tfsec/config.yml
 
       - name: Select workspace
         run: terraform workspace select ${{ needs.setup.outputs.workspace }} || terraform workspace new ${{ needs.setup.outputs.workspace }}

@@ -21,11 +21,7 @@ resource "aws_ecr_repository" "repo" {
   image_tag_mutability = "MUTABLE"
 
   lifecycle {
-    # TEMP: false while switching encryption_configuration to KMS — that
-    # attribute is immutable on an existing repo, so this one apply replaces
-    # all 6 (confirmed empty, 0 images, via `aws ecr list-images` — nothing
-    # lost). Revert to true in the very next commit once this lands.
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   image_scanning_configuration {

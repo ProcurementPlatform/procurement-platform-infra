@@ -28,3 +28,11 @@ exclude:
   # (its own encryption/lifecycle/policy) — deferred as a follow-up, not done
   # here to avoid disproportionate scope for one MEDIUM finding.
   - aws-s3-enable-bucket-logging
+
+  # VERIFIED FALSE POSITIVE, not an accepted risk: flow logs ARE enabled
+  # (modules/vpc/main.tf sets enable_flow_log=true). Confirmed by reading
+  # .terraform/modules/vpc.vpc/vpc-flow-logs.tf directly — the resource is
+  # gated by `local.enable_flow_log = var.create_vpc && var.enable_flow_log`,
+  # both true here. tfsec's static analysis doesn't trace through that local
+  # indirection back to the aws_vpc resource it's checking.
+  - aws-ec2-require-vpc-flow-logs-for-all-vpcs

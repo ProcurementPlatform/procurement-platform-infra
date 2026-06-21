@@ -38,7 +38,13 @@ jobs:
             echo "create_global_resources=${{ inputs.create_global_resources }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.pull_request.base.ref || github.ref_name }}" = "main" ]; then
             echo "workspace=prod" >> "$GITHUB_OUTPUT"
-            echo "create_global_resources=false" >> "$GITHUB_OUTPUT"
+            # prod is the workspace holding the account-level singletons
+            # (ACM/ECR/Route53/OIDC/SES) — every apply of it must pass true,
+            # or Terraform sees count=0 for those modules and plans to
+            # destroy them. (prevent_destroy on ACM/Route53 blocks that from
+            # actually executing, but it shouldn't be relied on as the only
+            # guard — this must always be true here.)
+            echo "create_global_resources=true" >> "$GITHUB_OUTPUT"
           else
             echo "workspace=dev" >> "$GITHUB_OUTPUT"
             echo "create_global_resources=false" >> "$GITHUB_OUTPUT"

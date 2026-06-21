@@ -77,13 +77,17 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-      - name: IaC security scan (Trivy config)
-        uses: aquasecurity/trivy-action@0.24.0
-        with:
-          scan-type: config
-          scan-ref: .
-          severity: HIGH,CRITICAL
-          exit-code: '1'
+      - name: Install tfsec
+        # tfsec-action's own installer calls api.github.com to resolve "latest",
+        # which aquasecurity's org-level IP allow-list blocks for GitHub-hosted
+        # runners. Downloading the pinned release asset directly bypasses that
+        # API entirely (it's a static file on a different host).
+        run: |
+          curl -sSL -o /usr/local/bin/tfsec https://github.com/aquasecurity/tfsec/releases/download/v1.28.10/tfsec-linux-amd64
+          chmod +x /usr/local/bin/tfsec
+
+      - name: IaC security scan (tfsec)
+        run: tfsec .
 
       - name: IaC security scan (Checkov)
         uses: bridgecrewio/checkov-action@master

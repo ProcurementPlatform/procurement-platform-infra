@@ -69,6 +69,25 @@ module "eks" {
     }
   }
 
+  # The module's default node security group only allows node-to-node traffic
+  # on the ephemeral range (1025-65535) + DNS. That silently breaks any pod
+  # listening on a low port when the caller is on a DIFFERENT node — e.g. the
+  # frontend (nginx on :80) is unreachable from the Gateway/Envoy pod when
+  # they're scheduled on separate nodes (cross-node :80 packets are dropped,
+  # surfacing as Envoy "connection timeout" 503s). Allowing all node-to-node
+  # traffic (the standard EKS recommendation) fixes :80 and any other low-port
+  # pod-to-pod path. Scoped to the node SG itself (self), not the world.
+  node_security_group_additional_rules = {
+    ingress_self_all = {
+      description = "Node to node — all ports/protocols (pods talk on arbitrary ports, incl. :80)"
+      protocol    = "-1"
+      from_port   = 0
+      to_port     = 0
+      type        = "ingress"
+      self        = true
+    }
+  }
+
   eks_managed_node_groups = {
     app_nodes = merge(
       {

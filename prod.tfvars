@@ -9,7 +9,7 @@ node_max_size       = 3
 node_desired_size   = 2
 node_instance_types = ["t3.medium"]
 s3_bucket_name      = "procurement-documents-prod-08"
-app_hostname        = "procure-flow.online"
+app_hostname        = "procurement.procure-flow.online"
 
 bedrock_text_model_id      = "amazon.nova-pro-v1:0"
 bedrock_embedding_model_id = "amazon.nova-2-multimodal-embeddings-v1:0"

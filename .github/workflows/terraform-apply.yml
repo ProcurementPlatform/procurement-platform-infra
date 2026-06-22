@@ -107,10 +107,20 @@ jobs:
             -out=tfplan
 
       - name: Upload plan artifact
+        # Includes modules/lambda/builds/ alongside the plan binary — that's
+        # where the archive_file data source writes the Lambda zip during
+        # this plan step. The apply job runs in a separate, fresh checkout
+        # with no access to this job's filesystem, so without bundling the
+        # zip here too, Terraform's fileexists() check on it (used to decide
+        # whether the package needs rebuilding) sees a different result at
+        # apply time than it recorded at plan time and aborts with
+        # "function returned an inconsistent result".
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ needs.setup.outputs.workspace }}-${{ github.run_id }}
-          path: tfplan
+          path: |
+            tfplan
+            modules/lambda/builds/
           retention-days: 1
 
   apply:

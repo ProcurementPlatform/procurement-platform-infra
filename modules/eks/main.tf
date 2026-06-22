@@ -69,6 +69,11 @@ module "eks" {
     }
   }
 
+  # No custom node_security_group_additional_rules needed: every app pod
+  # listens on a port in the module's default node-to-node range
+  # (1025-65535) — backends on 5001-5006, and the frontend on 8080 (its nginx
+  # was moved off privileged :80 specifically so cross-node Gateway->frontend
+  # traffic works without widening the node security group).
   eks_managed_node_groups = {
     app_nodes = merge(
       {

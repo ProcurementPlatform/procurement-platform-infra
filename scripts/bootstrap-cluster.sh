@@ -226,22 +226,12 @@ elif [ "${ENABLE_CLOUDFRONT:-false}" = "true" ]; then
 else
   echo "Gateway NLB: $NLB_HOSTNAME -> upserting Route 53 CNAME for $DOMAIN"
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "procure-flow.online." --query "HostedZones[0].Id" --output text | sed 's#/hostedzone/##')
-  CHANGE_BATCH_FILE=$(mktemp)
-  cat > "$CHANGE_BATCH_FILE" <<JSON
-{
-  "Changes": [{
-    "Action": "UPSERT",
-    "ResourceRecordSet": {
-      "Name": "$DOMAIN",
-      "Type": "CNAME",
-      "TTL": 60,
-      "ResourceRecords": [{"Value": "$NLB_HOSTNAME"}]
-    }
-  }]
-}
-JSON
-  aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" --change-batch "file://$CHANGE_BATCH_FILE"
-  rm -f "$CHANGE_BATCH_FILE"
+  # Inline JSON, not a temp file: on Windows/Git Bash the AWS CLI is a native
+  # Windows binary that can't read a mktemp "/tmp/..." path passed as file://
+  # (it resolves it to C:\tmp\... which doesn't exist). A --change-batch string
+  # works identically on Linux CI runners and Windows.
+  aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+    --change-batch "{\"Changes\":[{\"Action\":\"UPSERT\",\"ResourceRecordSet\":{\"Name\":\"$DOMAIN\",\"Type\":\"CNAME\",\"TTL\":60,\"ResourceRecords\":[{\"Value\":\"$NLB_HOSTNAME\"}]}}]}"
 fi
 
 echo ""

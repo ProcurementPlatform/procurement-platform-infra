@@ -28,6 +28,10 @@
 
 set -euo pipefail
 
+# Resolve the script's own directory so file references (e.g. the Grafana
+# dashboard JSON) work regardless of the caller's working directory.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 ENV=${1:?Usage: $0 <dev|prod>}
 AWS_REGION="us-east-1"
 GITOPS_REPO_URL="https://github.com/ProcurementPlatform/procurement-platform-gitops.git"
@@ -138,6 +142,16 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
   -f "$PROMETHEUS_VALUES" \
   --wait
 rm -f "$PROMETHEUS_VALUES"
+
+# Load the custom application dashboard. Grafana's sidecar auto-imports any
+# ConfigMap in the monitoring namespace labeled grafana_dashboard=1 — so this
+# survives recreate and needs no manual Grafana clicks. Pairs with the app's
+# ServiceMonitors (gitops repo) which feed the http_* metrics this charts.
+echo "==> Loading custom Grafana application dashboard..."
+kubectl create configmap procurement-app-dashboard -n monitoring \
+  --from-file=procurement-app.json="$SCRIPT_DIR/grafana-dashboards/procurement-app.json" \
+  --dry-run=client -o yaml | kubectl apply -f -
+kubectl label configmap procurement-app-dashboard -n monitoring grafana_dashboard=1 --overwrite
 
 echo "==> Installing Kubernetes Gateway API CRDs ($GATEWAY_API_VERSION)..."
 kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"

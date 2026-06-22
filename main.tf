@@ -132,12 +132,6 @@ module "dynamodb" {
   tags        = var.tags
 }
 
-module "cognito" {
-  source      = "./modules/cognito"
-  environment = local.environment
-  tags        = var.tags
-}
-
 module "iam_irsa" {
   source            = "./modules/iam"
   environment       = local.environment

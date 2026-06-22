@@ -10,3 +10,6 @@ backend.hcl
 
 # terraform-aws-modules/lambda build artifacts (zips regenerated on every apply)
 builds/
+
+# Local-only capstone prep docs — not tracked in the repo
+docs/

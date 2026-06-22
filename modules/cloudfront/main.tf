@@ -14,9 +14,16 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_id   = "alb-origin"
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "https-only"
+      http_port  = 80
+      https_port = 443
+      # http-only to the origin: CloudFront validates an HTTPS origin's cert
+      # against the ORIGIN hostname (the NLB's *.elb.amazonaws.com name), but
+      # our ACM cert is for *.procure-flow.online — that mismatch fails an
+      # https-only origin. So TLS terminates at the edge (viewer ->
+      # CloudFront via the ACM cert) and CloudFront reaches the NLB over HTTP
+      # on port 80 within AWS. viewer_protocol_policy still forces HTTPS for
+      # end users.
+      origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }

@@ -35,8 +35,6 @@ KMS_KEY_ID=$(terraform output -raw kms_key_arn)
 APP_HOSTNAME=$(terraform output -raw app_hostname)
 BEDROCK_TEXT_MODEL=$(terraform output -raw bedrock_text_model_id)
 BEDROCK_EMBEDDING_MODEL=$(terraform output -raw bedrock_embedding_model_id)
-COGNITO_USER_POOL_ID=$(terraform output -raw cognito_user_pool_id)
-COGNITO_CLIENT_ID=$(terraform output -raw cognito_client_id)
 DYNAMODB_TABLES_JSON=$(terraform output -json dynamodb_table_names)
 SECRETS_PREFIX=$(terraform output -raw secrets_name_prefix)
 
@@ -72,8 +70,6 @@ for SERVICE in "${SERVICES[@]}"; do
     --arg AWS_BEDROCK_REGION "$AWS_REGION" \
     --arg AWS_BEDROCK_TEXT_MODEL_ID "$BEDROCK_TEXT_MODEL" \
     --arg AWS_BEDROCK_EMBEDDING_MODEL_ID "$BEDROCK_EMBEDDING_MODEL" \
-    --arg COGNITO_USER_POOL_ID "$COGNITO_USER_POOL_ID" \
-    --arg COGNITO_CLIENT_ID "$COGNITO_CLIENT_ID" \
     --argjson DYNAMODB_TABLES "$DYNAMODB_TABLES_JSON" \
     --arg S3_BUCKET_NAME "$S3_BUCKET" \
     '{
@@ -89,8 +85,6 @@ for SERVICE in "${SERVICES[@]}"; do
       AWS_BEDROCK_REGION: $AWS_BEDROCK_REGION,
       AWS_BEDROCK_TEXT_MODEL_ID: $AWS_BEDROCK_TEXT_MODEL_ID,
       AWS_BEDROCK_EMBEDDING_MODEL_ID: $AWS_BEDROCK_EMBEDDING_MODEL_ID,
-      COGNITO_USER_POOL_ID: $COGNITO_USER_POOL_ID,
-      COGNITO_CLIENT_ID: $COGNITO_CLIENT_ID,
       DYNAMODB_TABLES: ($DYNAMODB_TABLES | tojson),
       S3_BUCKET_NAME: $S3_BUCKET_NAME
     }')

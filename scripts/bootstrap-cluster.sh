@@ -209,6 +209,20 @@ done
 if [ -z "$NLB_HOSTNAME" ]; then
   echo "WARN: Gateway NLB hostname not ready after 5 min — Route 53 not updated."
   echo "      Re-run this script once ArgoCD has synced, or check: kubectl get svc procurement-$ENV -n $APP_NAMESPACE"
+elif [ "${ENABLE_CLOUDFRONT:-false}" = "true" ]; then
+  # CloudFront mode: do NOT create a domain -> NLB CNAME. The CloudFront
+  # Terraform module owns the domain record (domain -> CloudFront A-alias),
+  # and CloudFront's ORIGIN points at the raw NLB hostname below. A CNAME and
+  # CloudFront's A-alias for the same name would conflict in Route 53, so we
+  # skip it here and let the second `terraform apply` create the DNS.
+  echo "ENABLE_CLOUDFRONT=true — skipping NLB CNAME (CloudFront will own $DOMAIN)."
+  echo ""
+  echo "  Next, enable CloudFront with this NLB as its origin:"
+  echo "    terraform apply -var-file=$ENV.tfvars -var=\"create_global_resources=true\" \\"
+  echo "      -var=\"enable_cloudfront=true\" \\"
+  echo "      -var=\"alb_dns_name=$NLB_HOSTNAME\" \\"
+  echo "      -var=\"acm_certificate_arn=\$(terraform output -raw acm_certificate_arn)\" \\"
+  echo "      -var=\"route53_zone_id=\$(terraform output -raw route53_zone_id)\""
 else
   echo "Gateway NLB: $NLB_HOSTNAME -> upserting Route 53 CNAME for $DOMAIN"
   ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "procure-flow.online." --query "HostedZones[0].Id" --output text | sed 's#/hostedzone/##')

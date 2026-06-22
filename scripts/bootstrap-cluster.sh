@@ -93,14 +93,51 @@ helm upgrade --install metrics-server metrics-server/metrics-server \
 echo "==> Installing kube-prometheus-stack (Prometheus + Grafana + Alertmanager)..."
 # One chart installs Prometheus, Grafana, Alertmanager, node-exporter, and
 # kube-state-metrics. Grafana ships with the Kubernetes dashboards preloaded.
-# Service stays ClusterIP (no extra ELB cost) — reach it via port-forward; see
-# the summary printed at the end.
+# Grafana gets its own internet-facing NLB (login-protected) for direct
+# access; Prometheus/Alertmanager stay ClusterIP (raw ops tools, no extra
+# ELB cost) — reach those via port-forward, see the summary printed at the end.
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts --force-update
+
+PROMETHEUS_VALUES=$(mktemp)
+cat > "$PROMETHEUS_VALUES" <<YAML
+grafana:
+  adminPassword: "$GRAFANA_ADMIN_PASSWORD"
+  service:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: external
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: ip
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+YAML
+
+# Slack webhook is read from an env var, never hardcoded here — export
+# SLACK_WEBHOOK_URL before running this script to enable Alertmanager
+# notifications. Without it, the default rules still evaluate, they just
+# have no receiver (same as before this change).
+if [ -n "${SLACK_WEBHOOK_URL:-}" ]; then
+  echo "==> Configuring Alertmanager Slack notifications"
+  cat >> "$PROMETHEUS_VALUES" <<YAML
+alertmanager:
+  config:
+    route:
+      receiver: slack-notifications
+      group_by: ['alertname', 'severity']
+    receivers:
+      - name: slack-notifications
+        slack_configs:
+          - api_url: "$SLACK_WEBHOOK_URL"
+            channel: '#alerts'
+            send_resolved: true
+            title: '{{ .CommonAnnotations.summary | default .CommonLabels.alertname }}'
+            text: '{{ .CommonAnnotations.description }}'
+YAML
+fi
+
 helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   --namespace monitoring --create-namespace \
-  --set grafana.adminPassword="$GRAFANA_ADMIN_PASSWORD" \
-  --set grafana.service.type=ClusterIP \
+  -f "$PROMETHEUS_VALUES" \
   --wait
+rm -f "$PROMETHEUS_VALUES"
 
 echo "==> Installing Kubernetes Gateway API CRDs ($GATEWAY_API_VERSION)..."
 kubectl apply -f "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
@@ -189,10 +226,11 @@ echo "ArgoCD server URL (may take 2-3 mins for LB to provision):"
 kubectl -n argocd get svc argocd-server -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
 echo ""
 echo ""
-echo "Grafana (ClusterIP — reach it locally with a port-forward):"
-echo "  kubectl -n monitoring port-forward svc/kube-prometheus-stack-grafana 3000:80"
-echo "  then open http://localhost:3000  (user: admin / pass: \$GRAFANA_ADMIN_PASSWORD)"
+echo "Grafana URL (may take 2-3 mins for LB to provision; user: admin / pass: \$GRAFANA_ADMIN_PASSWORD):"
+kubectl -n monitoring get svc kube-prometheus-stack-grafana -o jsonpath="{.status.loadBalancer.ingress[0].hostname}"
 echo ""
-echo "Prometheus (same pattern):"
+echo ""
+echo "Prometheus / Alertmanager (ClusterIP — reach locally with a port-forward):"
 echo "  kubectl -n monitoring port-forward svc/kube-prometheus-stack-prometheus 9090:9090"
+echo "  kubectl -n monitoring port-forward svc/kube-prometheus-stack-alertmanager 9093:9093"
 echo ""

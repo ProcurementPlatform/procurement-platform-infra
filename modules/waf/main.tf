@@ -1,7 +1,8 @@
 resource "aws_wafv2_web_acl" "main" {
+  count       = var.enabled ? 1 : 0
   name        = "procurement-${var.environment}-waf-acl"
   description = "WAF Web ACL for procurement platform"
-  scope       = "REGIONAL"
+  scope       = "CLOUDFRONT"
 
   default_action {
     allow {}

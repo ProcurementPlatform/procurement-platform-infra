@@ -1,7 +1,4 @@
 locals {
-  # Maps the long service identifiers used everywhere else in Terraform/Helm/IRSA
-  # (frontend, identity-service, ...) to the SHORT repo names already created by
-  # scripts/ecr-push.sh and in active use (procurement-identity, procurement-ai, ...).
   repo_short_name = {
     frontend              = "frontend"
     "identity-service"    = "identity"
@@ -13,11 +10,8 @@ locals {
 }
 
 resource "aws_ecr_repository" "repo" {
-  for_each = toset(var.services)
-  name     = "procurement-${local.repo_short_name[each.value]}"
-  # MUTABLE is required, not a default left unconsidered: build.yml pushes
-  # both a content-addressed tag and a rolling `:latest` on every build —
-  # IMMUTABLE would reject the repeat `:latest` push every single time.
+  for_each             = toset(var.services)
+  name                 = "procurement-${local.repo_short_name[each.value]}"
   image_tag_mutability = "MUTABLE"
 
   lifecycle {

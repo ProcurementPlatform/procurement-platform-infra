@@ -1,11 +1,3 @@
-# No aws_cloudwatch_log_group "eks" here on purpose: the EKS module enables
-# control plane logging (cluster_enabled_log_types defaults to
-# ["audit","api","authenticator"]), which makes AWS's EKS service itself the
-# permanent owner of /aws/eks/<cluster>/cluster — it auto-creates/recreates
-# that log group on its own. Terraform trying to also manage it collides with
-# that ownership (confirmed via CloudTrail: an EKS-internal identity, not us,
-# created it mid-apply). Retention for it can only be set via the AWS-side
-# default or a one-off `aws logs put-retention-policy` if needed.
 
 resource "aws_cloudwatch_log_group" "service" {
   for_each          = toset(var.services)

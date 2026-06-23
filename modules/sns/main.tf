@@ -3,7 +3,6 @@ resource "aws_sns_topic" "alerts" {
   kms_master_key_id = var.kms_key_arn
 }
 
-# Allows EventBridge and CloudWatch to publish to the topic
 resource "aws_sns_topic_policy" "default" {
   arn = aws_sns_topic.alerts.arn
 

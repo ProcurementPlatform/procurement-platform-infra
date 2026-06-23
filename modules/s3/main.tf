@@ -1,10 +1,6 @@
 resource "aws_s3_bucket" "bucket" {
   bucket = var.bucket_name
   tags   = var.tags
-  # force_destroy intentionally left false (default): this bucket holds real
-  # documents/seed data. If it's ever targeted for destroy by mistake,
-  # Terraform should fail loudly (BucketNotEmpty) instead of silently
-  # deleting everything in it.
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "enc" {

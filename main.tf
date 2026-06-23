@@ -75,10 +75,6 @@ locals {
 
 data "aws_caller_identity" "current" {}
 
-# ============================================================
-# Environment-scoped resources — applied per workspace (dev/prod)
-# ============================================================
-
 module "vpc" {
   source          = "./modules/vpc"
   environment     = local.environment
@@ -133,14 +129,10 @@ module "dynamodb" {
 }
 
 module "iam_irsa" {
-  source            = "./modules/iam"
-  environment       = local.environment
-  services          = local.services
-  oidc_provider_arn = module.eks.oidc_provider_arn
-  # Secrets are NOT created by Terraform (see scripts/create-secrets.sh) — the
-  # value never touches Terraform state. IRSA is scoped to the predictable
-  # naming convention the script uses (procurement/<env>/<service>) instead of
-  # a real resource ARN.
+  source                     = "./modules/iam"
+  environment                = local.environment
+  services                   = local.services
+  oidc_provider_arn          = module.eks.oidc_provider_arn
   secret_arns                = ["arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:procurement/${local.environment}/*"]
   dynamodb_tables            = values(module.dynamodb.table_names)
   s3_bucket_arn              = module.s3.bucket_arn
@@ -157,15 +149,11 @@ module "sns" {
 }
 
 module "lambda_alerts" {
-  source          = "./modules/lambda"
-  environment     = local.environment
-  sender_email    = var.sns_sender_email
-  recipient_email = var.sns_recipient_email
-  sns_topic_arn   = module.sns.topic_arn
-  # ses is a singleton (both envs share the same sender/recipient addresses —
-  # no point verifying the same SES identity twice). Use the just-created
-  # identity when this apply is the one creating it; otherwise take the ARN
-  # via var.ses_sender_identity_arn, sourced from whichever workspace did.
+  source                  = "./modules/lambda"
+  environment             = local.environment
+  sender_email            = var.sns_sender_email
+  recipient_email         = var.sns_recipient_email
+  sns_topic_arn           = module.sns.topic_arn
   ses_sender_identity_arn = var.create_global_resources ? module.ses[0].sender_identity_arn : var.ses_sender_identity_arn
   tags                    = var.tags
 }
@@ -190,6 +178,7 @@ module "cloudwatch" {
 module "waf" {
   source      = "./modules/waf"
   environment = local.environment
+  enabled     = var.enable_cloudfront
 }
 
 module "cloudfront" {
@@ -200,14 +189,9 @@ module "cloudfront" {
   domain_name         = var.app_hostname
   acm_certificate_arn = var.acm_certificate_arn
   route53_zone_id     = var.route53_zone_id
+  web_acl_id          = module.waf.web_acl_arn
   tags                = var.tags
 }
-
-# ============================================================
-# Account-level singletons — applied once via `terraform workspace
-# first dev/prod workspace apply that passes create_global_resources=true.
-# Never duplicated into the other workspace.
-# ============================================================
 
 module "ecr" {
   count    = var.create_global_resources ? 1 : 0
@@ -344,9 +328,7 @@ module "github_oidc_role_infra" {
 }
 
 resource "aws_iam_role_policy_attachment" "infra_admin_for_apply" {
-  count = var.create_global_resources ? 1 : 0
-  # Terraform apply needs broad provisioning rights (VPC/EKS/IAM/etc). Scope
-  # this down post-bootstrap once the full resource set stabilizes.
+  count      = var.create_global_resources ? 1 : 0
   role       = module.github_oidc_role_infra[0].role_name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

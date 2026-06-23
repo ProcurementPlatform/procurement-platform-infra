@@ -56,6 +56,11 @@ variable "enable_cloudfront" {
   type        = bool
   default     = false
 }
+variable "enable_bastion" {
+  description = "Create an SSM-only bastion EC2 instance for reviewer/demo cluster access. Off by default."
+  type        = bool
+  default     = false
+}
 variable "alb_dns_name" {
   description = "ALB hostname from `kubectl get ingress -n procurement-<env>`. Only required when enable_cloudfront = true."
   type        = string

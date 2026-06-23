@@ -30,6 +30,17 @@ module "eks" {
   }
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
+  cluster_security_group_additional_rules = var.bastion_security_group_id == "" ? {} : {
+    ingress_bastion_https = {
+      description              = "Bastion kubectl access to the EKS API"
+      protocol                 = "tcp"
+      from_port                = 443
+      to_port                  = 443
+      type                     = "ingress"
+      source_security_group_id = var.bastion_security_group_id
+    }
+  }
+
   cluster_addons = {
     vpc-cni = {
       most_recent    = true

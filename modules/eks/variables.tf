@@ -23,3 +23,9 @@ variable "admin_principal_arns" {
   type        = list(string)
   default     = []
 }
+
+variable "bastion_security_group_id" {
+  description = "Bastion's security group ID, allowed ingress to the EKS API on 443. From inside the VPC, the API endpoint resolves to its private ENI IPs (not the public ones) — without this rule, kubectl from the bastion times out even though cluster_endpoint_public_access is on. Empty string disables the rule."
+  type        = string
+  default     = ""
+}

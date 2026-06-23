@@ -91,19 +91,38 @@ module "kms" {
   tags        = var.tags
 }
 
+module "bastion" {
+  source            = "./modules/bastion"
+  enabled           = var.enable_bastion
+  environment       = local.environment
+  vpc_id            = module.vpc.vpc_id
+  private_subnet_id = module.vpc.private_subnets[0]
+  # Computed independently of module.eks.cluster_name (same naming convention
+  # the eks module itself uses internally) — referencing module.eks's output
+  # here would create a cycle, since module.eks below needs the bastion's
+  # IAM role ARN for its own access_entries.
+  cluster_name = "${local.environment}-eks"
+  aws_region   = var.aws_region
+  tags         = var.tags
+}
+
 module "eks" {
-  source               = "./modules/eks"
-  environment          = local.environment
-  vpc_id               = module.vpc.vpc_id
-  private_subnets      = module.vpc.private_subnets
-  node_min_size        = var.node_min_size
-  node_max_size        = var.node_max_size
-  node_desired_size    = var.node_desired_size
-  node_instance_types  = var.node_instance_types
-  use_ubuntu_ami       = var.use_ubuntu_ami
-  ubuntu_ami_ssm_path  = var.ubuntu_ami_ssm_path
-  admin_principal_arns = var.eks_admin_principal_arns
-  tags                 = var.tags
+  source              = "./modules/eks"
+  environment         = local.environment
+  vpc_id              = module.vpc.vpc_id
+  private_subnets     = module.vpc.private_subnets
+  node_min_size       = var.node_min_size
+  node_max_size       = var.node_max_size
+  node_desired_size   = var.node_desired_size
+  node_instance_types = var.node_instance_types
+  use_ubuntu_ami      = var.use_ubuntu_ami
+  ubuntu_ami_ssm_path = var.ubuntu_ami_ssm_path
+  admin_principal_arns = concat(
+    var.eks_admin_principal_arns,
+    var.enable_bastion ? [module.bastion.role_arn] : []
+  )
+  bastion_security_group_id = var.enable_bastion ? module.bastion.security_group_id : ""
+  tags                      = var.tags
 }
 
 module "eks_addons" {

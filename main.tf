@@ -186,7 +186,7 @@ module "cloudfront" {
   enabled             = var.enable_cloudfront
   environment         = local.environment
   alb_dns_name        = var.alb_dns_name
-  domain_name         = var.app_hostname
+  domain_name         = var.cloudfront_domain_name != "" ? var.cloudfront_domain_name : var.app_hostname
   acm_certificate_arn = var.acm_certificate_arn
   route53_zone_id     = var.route53_zone_id
   web_acl_id          = module.waf.web_acl_arn

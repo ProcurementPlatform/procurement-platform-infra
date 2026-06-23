@@ -61,6 +61,11 @@ variable "alb_dns_name" {
   type        = string
   default     = ""
 }
+variable "cloudfront_domain_name" {
+  description = "Domain CloudFront answers on. Defaults to app_hostname if unset — override (e.g. the bare apex) to avoid colliding with an existing CNAME on app_hostname, so both the NLB-direct domain and CloudFront can coexist."
+  type        = string
+  default     = ""
+}
 variable "acm_certificate_arn" {
   description = "ACM cert ARN from `terraform output -raw acm_certificate_arn` against the workspace that holds create_global_resources=true. Only required when enable_cloudfront = true."
   type        = string

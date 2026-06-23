@@ -24,8 +24,14 @@ variable "admin_principal_arns" {
   default     = []
 }
 
+variable "bastion_enabled" {
+  description = "Plain bool gate for the bastion ingress rule (see main.tf comment for why this must be a static bool, not derived from bastion_security_group_id)."
+  type        = bool
+  default     = false
+}
+
 variable "bastion_security_group_id" {
-  description = "Bastion's security group ID, allowed ingress to the EKS API on 443. From inside the VPC, the API endpoint resolves to its private ENI IPs (not the public ones) — without this rule, kubectl from the bastion times out even though cluster_endpoint_public_access is on. Empty string disables the rule."
+  description = "Bastion's security group ID, allowed ingress to the EKS API on 443. From inside the VPC, the API endpoint resolves to its private ENI IPs (not the public ones) — without this rule, kubectl from the bastion times out even though cluster_endpoint_public_access is on. Only read when bastion_enabled = true."
   type        = string
   default     = ""
 }

@@ -2,8 +2,6 @@ resource "aws_acm_certificate" "cert" {
   domain_name       = "*.${var.domain_name}"
   validation_method = "DNS"
 
-  # The wildcard alone does NOT cover the bare apex domain (e.g. procure-flow.online
-  # itself, as opposed to dev.procure-flow.online) — add it explicitly as a SAN.
   subject_alternative_names = [var.domain_name]
 
   lifecycle {

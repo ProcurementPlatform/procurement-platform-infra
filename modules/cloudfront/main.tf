@@ -1,8 +1,3 @@
-# Fronts the frontend's ALB with CloudFront. Gated by var.enabled in root
-# main.tf — the ALB doesn't exist until ArgoCD syncs the Ingress, so this is
-# always a second, later apply once you have a real ALB DNS name, never the
-# same apply that creates the cluster.
-
 resource "aws_cloudfront_distribution" "frontend" {
   count   = var.enabled ? 1 : 0
   enabled = true
@@ -14,15 +9,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     origin_id   = "alb-origin"
 
     custom_origin_config {
-      http_port  = 80
-      https_port = 443
-      # http-only to the origin: CloudFront validates an HTTPS origin's cert
-      # against the ORIGIN hostname (the NLB's *.elb.amazonaws.com name), but
-      # our ACM cert is for *.procure-flow.online — that mismatch fails an
-      # https-only origin. So TLS terminates at the edge (viewer ->
-      # CloudFront via the ACM cert) and CloudFront reaches the NLB over HTTP
-      # on port 80 within AWS. viewer_protocol_policy still forces HTTPS for
-      # end users.
+      http_port              = 80
+      https_port             = 443
       origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
@@ -34,9 +22,6 @@ resource "aws_cloudfront_distribution" "frontend" {
     target_origin_id       = "alb-origin"
     viewer_protocol_policy = "redirect-to-https"
 
-    # Dynamic SPA + API behind this origin — no edge caching of responses by
-    # default. The app's own Cache-Control headers govern actual caching of
-    # static assets; this just gives CDN/TLS termination at the edge.
     min_ttl     = 0
     default_ttl = 0
     max_ttl     = 0
@@ -62,6 +47,8 @@ resource "aws_cloudfront_distribution" "frontend" {
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
+
+  web_acl_id = var.web_acl_id
 
   tags = var.tags
 }

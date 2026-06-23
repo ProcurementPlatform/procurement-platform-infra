@@ -1,4 +1,3 @@
-# Bedrock access is scoped to ai-service only — the other 5 services get none.
 resource "aws_iam_policy" "bedrock_policy" {
   count       = contains(var.services, "ai-service") ? 1 : 0
   name        = "${var.environment}-ai-service-bedrock-policy"

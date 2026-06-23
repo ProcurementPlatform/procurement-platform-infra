@@ -1,10 +1,3 @@
-# Canonical's official EKS-optimized Ubuntu AMI, looked up via their published
-# SSM parameter. NOT independently verified against AWS for this account/region
-# — run the lookup yourself before relying on it:
-#   aws ssm get-parameter --name /aws/service/canonical/ubuntu/eks/22.04/1.30/stable/current/amd64/hvm/ebs-gp2/ami-id --region us-east-1
-# If that fails or the bootstrap is wrong, nodes never report Ready and the
-# node group hangs in "Still creating..." exactly like the AL2 incident did —
-# watch this closely, and abort well before 30 minutes if it doesn't settle.
 data "aws_ssm_parameter" "ubuntu_eks_ami" {
   count = var.use_ubuntu_ami ? 1 : 0
   name  = var.ubuntu_ami_ssm_path
@@ -22,14 +15,6 @@ module "eks" {
 
   create_cloudwatch_log_group    = false
   cluster_endpoint_public_access = true
-  # NOT enable_cluster_creator_admin_permissions: that grants access to
-  # whoever happens to run `terraform apply` (you locally, or CI), and since
-  # EKS only allows one access entry per principal, it actively conflicts
-  # with admin_principal_arns below whenever the applier is also in that
-  # list — confirmed by a real ResourceInUseException. Nothing in this config
-  # uses the kubernetes/helm provider anymore (moved to bootstrap-cluster.sh),
-  # so CI never needs Kubernetes RBAC access at all. admin_principal_arns is
-  # the sole, permanent, explicit grant — never displaced by who applies.
   access_entries = {
     for idx, arn in var.admin_principal_arns : "admin-${idx}" => {
       principal_arn = arn
@@ -43,19 +28,8 @@ module "eks" {
       }
     }
   }
-  # Public endpoint stays on (with the default 0.0.0.0/0 cidrs) deliberately:
-  # GitHub Actions runner IPs are ephemeral/unenumerable, and bootstrap-cluster.sh
-  # runs from a laptop on varying networks. Both findings are suppressed in
-  # .tfsec/config.yml with this same reasoning. Real access control is IAM/EKS
-  # access entries + Kubernetes RBAC, not network-layer restriction.
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  # Manage the VPC CNI as an addon so we can turn on prefix delegation. This
-  # raises the per-node pod cap dramatically (t3.medium: 17 -> ~110 pods), which
-  # is what lets BOTH the procurement-dev and procurement-prod namespaces — plus
-  # ArgoCD, Kgateway/Envoy, and the other add-ons — fit on just 2x t3.medium.
-  # before_compute = true applies the CNI config before nodes join, so even the
-  # initial node group gets prefix delegation (no node recycle needed).
   cluster_addons = {
     vpc-cni = {
       most_recent    = true
@@ -69,11 +43,6 @@ module "eks" {
     }
   }
 
-  # No custom node_security_group_additional_rules needed: every app pod
-  # listens on a port in the module's default node-to-node range
-  # (1025-65535) — backends on 5001-5006, and the frontend on 8080 (its nginx
-  # was moved off privileged :80 specifically so cross-node Gateway->frontend
-  # traffic works without widening the node security group).
   eks_managed_node_groups = {
     app_nodes = merge(
       {
@@ -96,7 +65,6 @@ module "eks" {
   tags = var.tags
 }
 
-# AWS Load Balancer Controller IAM Role
 module "load_balancer_controller_irsa_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
   version = "~> 5.0"

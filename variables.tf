@@ -1,7 +1,6 @@
 variable "aws_region" { type = string }
 variable "tags" { type = map(string) }
 
-# --- Environment-scoped (set per workspace via dev.tfvars / prod.tfvars) ---
 variable "vpc_cidr" { type = string }
 variable "azs" { type = list(string) }
 variable "private_subnets" { type = list(string) }
@@ -32,7 +31,6 @@ variable "bedrock_embedding_model_id" { type = string }
 variable "sns_sender_email" { type = string }
 variable "sns_recipient_email" { type = string }
 
-# --- Account-level singletons (only used when create_global_resources = true) ---
 variable "create_global_resources" {
   description = "Create account-level singleton resources (ECR, ACM, Route53, GitHub OIDC, SES). Pass true on the first apply of whichever workspace (dev or prod) you want to hold them — never pass true for both."
   type        = bool
@@ -53,7 +51,6 @@ variable "github_repo_infra" {
   type        = string
 }
 
-# --- CloudFront (phase 2 — only applied after the first GitOps sync has created a real ALB) ---
 variable "enable_cloudfront" {
   description = "Turn on once kubectl get ingress shows a real ALB hostname for this workspace's environment. Off by default."
   type        = bool

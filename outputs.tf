@@ -1,4 +1,3 @@
-# --- Environment-scoped outputs (available in every workspace) ---
 output "aws_region" { value = var.aws_region }
 output "eks_cluster_name" { value = module.eks.cluster_name }
 output "eks_cluster_endpoint" { value = module.eks.cluster_endpoint }
@@ -19,7 +18,6 @@ output "bedrock_text_model_id" { value = var.bedrock_text_model_id }
 output "bedrock_embedding_model_id" { value = var.bedrock_embedding_model_id }
 output "secrets_name_prefix" { value = "procurement/${local.environment}" }
 
-# --- Account-level singleton outputs (only populated when create_global_resources = true) ---
 output "ecr_repository_urls" {
   value = var.create_global_resources ? module.ecr[0].repository_urls : null
 }

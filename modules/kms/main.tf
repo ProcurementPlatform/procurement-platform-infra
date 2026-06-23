@@ -1,10 +1,5 @@
 data "aws_caller_identity" "current" {}
 
-# CloudWatch Logs and SNS both require an explicit key-policy grant for their
-# service principal to use a customer-managed CMK — unlike S3/DynamoDB, IAM
-# permissions on the calling principal alone aren't enough for these two.
-# Without this, the SNS topic / CloudWatch log group encryption added for the
-# tfsec findings would fail at apply time with AccessDenied.
 data "aws_iam_policy_document" "key_policy" {
   statement {
     sid       = "EnableIAMUserPermissions"

@@ -24,7 +24,7 @@ github_repo_infra = "ProcurementPlatform/procurement-platform-infra"
 eks_admin_principal_arns = ["arn:aws:iam::919010206859:user/rootVinay"]
 
 enable_cloudfront   = true
-enable_bastion      = false
+enable_bastion      = true
 alb_dns_name        = "k8s-procurem-procurem-41a31add54-de60d5f2d1cbaf5b.elb.us-east-1.amazonaws.com"
 acm_certificate_arn = "arn:aws:acm:us-east-1:919010206859:certificate/7b27e59d-f495-4690-a7b5-4de8d21857c9"
 route53_zone_id     = "Z02726083CKNR3VSHFFNT"

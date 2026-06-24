@@ -77,7 +77,6 @@ resource "aws_instance" "bastion" {
   vpc_security_group_ids = [aws_security_group.bastion[0].id]
   iam_instance_profile   = aws_iam_instance_profile.bastion[0].name
 
-  # IMDSv2 only — blocks the SSRF-to-instance-metadata class of attack.
   metadata_options {
     http_tokens   = "required"
     http_endpoint = "enabled"
@@ -88,10 +87,6 @@ resource "aws_instance" "bastion" {
     volume_size = 10
   }
 
-  # /etc/profile.d runs on every interactive login shell (SSM Session Manager
-  # included), not at boot — so this re-resolves kubeconfig fresh on every
-  # connect, self-healing against cluster destroy/recreate cycles, and avoids
-  # the ssm-user-doesn't-exist-yet-at-boot-time race a cloud-init step would hit.
   user_data = <<-EOF
     #!/bin/bash
     set -e

@@ -39,7 +39,7 @@ data "aws_iam_policy_document" "key_policy" {
     resources = ["*"]
     principals {
       type        = "Service"
-      identifiers = ["sns.amazonaws.com"]
+      identifiers = ["sns.amazonaws.com", "cloudwatch.amazonaws.com"]
     }
   }
 }

@@ -30,7 +30,7 @@ module "lambda_function" {
     ses = {
       effect    = "Allow"
       actions   = ["ses:SendEmail", "ses:SendRawEmail"]
-      resources = [var.ses_sender_identity_arn]
+      resources = [var.ses_sender_identity_arn, var.ses_recipient_identity_arn]
     }
   }
 

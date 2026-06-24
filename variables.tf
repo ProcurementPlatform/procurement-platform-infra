@@ -42,6 +42,11 @@ variable "ses_sender_identity_arn" {
   type        = string
   default     = ""
 }
+variable "ses_recipient_identity_arn" {
+  description = "SES recipient identity ARN from `terraform output -raw ses_recipient_identity_arn` against the workspace that holds create_global_resources=true. Only required in the *other* workspace (the one that didn't create it)."
+  type        = string
+  default     = ""
+}
 variable "github_repo_app" {
   description = "owner/repo for the app repo (ECR push CI role trust), e.g. ProcurementPlatform/procurement-platform-app"
   type        = string

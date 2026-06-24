@@ -26,16 +26,13 @@ github_repo_infra = "ProcurementPlatform/procurement-platform-infra"
 # Always gets cluster-admin EKS access, regardless of who last ran apply.
 eks_admin_principal_arns = ["arn:aws:iam::919010206859:user/rootVinay"]
 
-# CloudFront/bastion deliberately OFF for now — VPC/EKS are being destroyed
-# for cost savings until the next review. Re-enabling requires a fresh
-# alb_dns_name (the old NLB no longer exists once EKS is recreated):
-#   1. terraform apply  (this file, as-is — brings back VPC/EKS only)
-#   2. ./scripts/create-secrets.sh prod && ./scripts/bootstrap-cluster.sh prod
-#      (prints the exact next command with the new NLB hostname filled in)
-#   3. Run that printed command, or set enable_cloudfront/enable_bastion =
-#      true here with the fresh alb_dns_name and re-apply.
-enable_cloudfront   = false
+# CloudFront re-enabled with the fresh NLB created by this cluster's bring-up
+# (the old NLB no longer exists once EKS was recreated). The CNAME bootstrap
+# wrote at app_hostname was deleted manually so this module's Route53 alias
+# for the same name can be created without a record-type conflict.
+enable_cloudfront   = true
 enable_bastion      = false
+alb_dns_name        = "k8s-procurem-procurem-41a31add54-de60d5f2d1cbaf5b.elb.us-east-1.amazonaws.com"
 acm_certificate_arn = "arn:aws:acm:us-east-1:919010206859:certificate/7b27e59d-f495-4690-a7b5-4de8d21857c9"
 route53_zone_id     = "Z02726083CKNR3VSHFFNT"
 

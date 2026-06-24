@@ -17,13 +17,10 @@ bedrock_embedding_model_id = "amazon.nova-2-multimodal-embeddings-v1:0"
 sns_sender_email    = "kondojuvinaykumar2004@gmail.com"
 sns_recipient_email = "307372@ust.com"
 
-# Only used when create_global_resources = true (applied once, alongside whichever
-# workspace's first apply you choose to hold the account-level singletons).
 domain_name       = "procure-flow.online"
 github_repo_app   = "ProcurementPlatform/procurement-platform-app"
 github_repo_infra = "ProcurementPlatform/procurement-platform-infra"
 
-# Always gets cluster-admin EKS access, regardless of who last ran apply.
 eks_admin_principal_arns = ["arn:aws:iam::919010206859:user/rootVinay"]
 
 tags = {

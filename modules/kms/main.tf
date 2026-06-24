@@ -38,12 +38,7 @@ data "aws_iam_policy_document" "key_policy" {
     ]
     resources = ["*"]
     principals {
-      type = "Service"
-      # sns.amazonaws.com covers SNS's own delivery to subscribers (e.g. Lambda).
-      # cloudwatch.amazonaws.com is also required: CloudWatch Alarms call
-      # sns:Publish directly, and publishing into a KMS-encrypted topic needs
-      # the calling service principal (not just SNS itself) granted decrypt /
-      # generate-data-key — without it, alarm_actions silently fail.
+      type        = "Service"
       identifiers = ["sns.amazonaws.com", "cloudwatch.amazonaws.com"]
     }
   }

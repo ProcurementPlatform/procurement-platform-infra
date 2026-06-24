@@ -97,13 +97,9 @@ module "bastion" {
   environment       = local.environment
   vpc_id            = module.vpc.vpc_id
   private_subnet_id = module.vpc.private_subnets[0]
-  # Computed independently of module.eks.cluster_name (same naming convention
-  # the eks module itself uses internally) — referencing module.eks's output
-  # here would create a cycle, since module.eks below needs the bastion's
-  # IAM role ARN for its own access_entries.
-  cluster_name = "${local.environment}-eks"
-  aws_region   = var.aws_region
-  tags         = var.tags
+  cluster_name      = "${local.environment}-eks"
+  aws_region        = var.aws_region
+  tags              = var.tags
 }
 
 module "eks" {

@@ -165,13 +165,14 @@ module "sns" {
 }
 
 module "lambda_alerts" {
-  source                  = "./modules/lambda"
-  environment             = local.environment
-  sender_email            = var.sns_sender_email
-  recipient_email         = var.sns_recipient_email
-  sns_topic_arn           = module.sns.topic_arn
-  ses_sender_identity_arn = var.create_global_resources ? module.ses[0].sender_identity_arn : var.ses_sender_identity_arn
-  tags                    = var.tags
+  source                     = "./modules/lambda"
+  environment                = local.environment
+  sender_email               = var.sns_sender_email
+  recipient_email            = var.sns_recipient_email
+  sns_topic_arn              = module.sns.topic_arn
+  ses_sender_identity_arn    = var.create_global_resources ? module.ses[0].sender_identity_arn : var.ses_sender_identity_arn
+  ses_recipient_identity_arn = var.create_global_resources ? module.ses[0].recipient_identity_arn : var.ses_recipient_identity_arn
+  tags                       = var.tags
 }
 
 resource "aws_sns_topic_subscription" "lambda_alerts" {

@@ -30,7 +30,14 @@ module "eks" {
   }
   cluster_enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  cluster_security_group_additional_rules = var.bastion_security_group_id == "" ? {} : {
+  # Gated on var.bastion_enabled (a plain bool, always known at plan time) —
+  # NOT on `var.bastion_security_group_id == ""`. That string is computed
+  # from module.bastion, which doesn't exist yet on a fresh apply; comparing
+  # an unknown value makes the whole conditional (and so the for_each map's
+  # key) unknown, which Terraform refuses ("known only after apply") and
+  # forced a two-pass apply. The VALUE below can still be unknown at plan
+  # time without issue — only a for_each map's KEYS must be statically known.
+  cluster_security_group_additional_rules = var.bastion_enabled ? {
     ingress_bastion_https = {
       description              = "Bastion kubectl access to the EKS API"
       protocol                 = "tcp"
@@ -39,7 +46,7 @@ module "eks" {
       type                     = "ingress"
       source_security_group_id = var.bastion_security_group_id
     }
-  }
+  } : {}
 
   cluster_addons = {
     vpc-cni = {

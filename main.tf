@@ -121,6 +121,7 @@ module "eks" {
     var.eks_admin_principal_arns,
     var.enable_bastion ? [module.bastion.role_arn] : []
   )
+  bastion_enabled           = var.enable_bastion
   bastion_security_group_id = var.enable_bastion ? module.bastion.security_group_id : ""
   tags                      = var.tags
 }
